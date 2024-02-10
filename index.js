@@ -5,8 +5,8 @@ const connection = require('./database/connection')
 const cors = require('cors')
 app.use(cors(
     {
-        origin:['https://cuhcodingclub.vercel.app'],
-        credentials:true,
+        origin:['https://cuhcodingclub.vercel.app/'],
+           
         sameSite:'none'
     }
 ))
