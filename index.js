@@ -59,6 +59,9 @@ app.post('/signin',(req ,res)=>{
     })
 })
 
+app.get('/' , (req ,res)=>{
+    res.send({message:"everything is fine "})
+})
 
 
 
