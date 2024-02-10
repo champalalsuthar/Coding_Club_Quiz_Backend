@@ -3,13 +3,15 @@ const app = express();
 const user = require('./database/model/user')
 const connection = require('./database/connection')
 const cors = require('cors')
-app.use(cors(
-    {
-        origin:"*",
-        credentials:true,
-        sameSite:'none'
-    }
-));
+// app.use(cors(
+//     {
+//         origin:"*",
+//         credentials:true,
+//         sameSite:'none'
+//     }
+// ));
+
+app.use(cors({ origin: 'https://cuhcodingclub.vercel.app' }));
 app.use(express.json())
 
 app.post('/signup',(req ,res)=>{
