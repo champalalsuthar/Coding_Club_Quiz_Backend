@@ -5,11 +5,11 @@ const connection = require('./database/connection')
 const cors = require('cors')
 app.use(cors(
     {
-        origin:['https://cuhcodingclub.vercel.app/'],
-           
+        origin:['https://cuhcodingclub.vercel.app'],
+        credentials:true,
         sameSite:'none'
     }
-))
+));
 app.use(express.json())
 
 app.post('/signup',(req ,res)=>{
