@@ -1,11 +1,14 @@
 const express = require('express')
 const app = express();
 const user = require('./database/model/user')
+const u1 = require('./database/model/u1')
+const quizsstore = require('./database/model/quizsstore')
 const connection = require('./database/connection')
 const cors = require('cors')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 const jWT_SECRET = "0";
+const UserResult = require('./database/model/UserResult');
 
 app.use(cors(
     {
@@ -99,7 +102,68 @@ app.post('/signin', (req, res) => {
         });
     });
 });
+app.post('/allquizes', async (req, res) => {
+    try {
+        const allQuizData = await quizsstore.find();
 
+       
+        res.json(allQuizData);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    // try{
+    //     console.log(quizstore);
+    //     res.status(200).json({code:200,data:quizstore});
+    // }catch (err) {
+    //     // console.log("5");
+    //     res.status(401).json({ code: 401, message: "error" });
+    // }
+});
+
+app.delete('/:quizId', async (req, res) => {
+    const { quizId } = req.params;
+
+    try {
+        // Use Mongoose to find and remove the quiz by ID
+        const deletedQuiz = await quizsstore.findByIdAndRemove(quizId);
+
+        if (!deletedQuiz) {
+            return res.status(404).json({ message: 'Quiz not found' });
+        }
+
+        res.json({ message: 'Quiz deleted successfully', deletedQuiz });
+    } catch (error) {
+        console.error('Error deleting quiz:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+// app.post('/allquizes/:id', async (req, res) => {
+//     try {
+
+//         const quizId = req.params.id;
+//         console.log(quizId);
+//         // Query the database to get all quiz data
+//         const QuizData = await quizsstore.find({ _id : quizId });
+
+//         // Send the all quiz data as the response
+//         console.log(QuizData)
+//         res.json(QuizData);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ error: "Internal Server Error" });
+//     }
+
+//     // try{
+//     //     console.log(quizstore);
+//     //     res.status(200).json({code:200,data:quizstore});
+//     // }catch (err) {
+//     //     // console.log("5");
+//     //     res.status(401).json({ code: 401, message: "error" });
+//     // }
+// });
 
 app.post('/validateToken', (req, res) => {
     const token = req.body.token;
@@ -262,15 +326,115 @@ app.post('/validateToken', (req, res) => {
 //         });
 //     });
 // });
+// app.post('/createquiz', (req, res) => {
+//     const { tittle, questions } = req.body;
+//     console.log(tittle);
+//     console.log(questions);
+//     const newquiz=new quizstore({tittle:tittle,Questions:questions})
+//     newquiz.save().then(()=>{
+//         console.log("data saved ");
+//     }).catch(()=>{
+//         console.log(err);
+//     })
+//     res.send({ message: "ok " });
+// })
+
+
+
+
+app.post('/createquiz', (req, res) => {
+    const { title, questions, name, userId } = req.body;
+    // console.log(title);
+    // console.log(questions);
+    const newquiz = new quizsstore({ title: title, Questions: questions, userfullname: name, userid: userId })
+    newquiz.save().then(() => {
+        console.log("new quiz data saved");
+        res.send({ code: 200, data: newquiz, message: "quiz created" });
+    }).catch(() => {
+        console.log(err);
+        res.send({ code: 202, message: "error in creating quiz" });
+    })
+
+})
+
+app.post('/saveUserResult', async (req, res) => {
+    try {
+        const { userId, quizTitle, score, numberOfQuestions } = req.body;
+
+        // Create a new user result instance
+        const newUserResult = new UserResult({
+            userId,
+            quizTitle,
+            score,
+            numberOfQuestions,
+        });
+
+        // Save the user result to the database
+        await newUserResult.save();
+
+        res.status(200).json({ message: 'User result saved successfully' });
+    } catch (error) {
+        console.error('Error saving user result:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.post('/userAllResults', async (req, res) => {
+    const { userId } = req.body;
+
+    try {
+        const userResults = await UserResult.find({ userId: userId });
+
+        if (!userResults || userResults.length === 0) {
+            return res.status(404).json({ message: 'No user results found for the specified user ID' });
+        }
+
+        res.status(200).json(userResults);
+    } catch (error) {
+        console.error('Error fetching user results:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.post('/AllCreatedQuizzes', async (req, res) => {
+    const { userId } = req.body;
+
+    try {
+        const userQuizes = await quizsstore.find({ userid: userId });
+
+        if (!userQuizes || userQuizes.length === 0) {
+            return res.status(404).json({ message: 'No user results found for the specified user ID' });
+        }
+
+        res.status(200).json(userQuizes);
+    } catch (error) {
+        console.error('Error fetching user results:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
+
+// app.post('/allquizes', (req, res) => {
+//     const { title, questions } = req.body;
+//     // console.log(title);
+//     // console.log(questions);
+//     const newquiz=new quizsstore({title:title,Questions:questions})
+//     newquiz.save().then(()=>{
+//         console.log("new quiz data saved");
+//         res.send({code:200,data:newquiz, message: "quiz created" });
+//     }).catch(()=>{
+//         console.log(err);
+//         res.send({code:202, message: "error in creating quiz" });
+//     })
+
+// })
 
 app.get('/', (req, res) => {
-    res.send({message:"everything is fine "})
+    res.send({ message: "everything is fine " })
 })
 
 
-
-
-
-app.listen(5000,(()=>{
+app.listen(5000, (() => {
     console.log("Server set ")
 }))
