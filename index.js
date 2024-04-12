@@ -9,9 +9,11 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 const jWT_SECRET = "0";
 const UserResult = require('./database/model/UserResult');
+const nodemailer = require("nodemailer");
 
 app.use(cors(
     {
+        // origin: "http://localhost:3000",
         origin: "https://cuhcodingclub.vercel.app",
         credentials: true
         // sameSite:'none'
@@ -20,6 +22,50 @@ app.use(cors(
 
 // app.use(cors({ origin: '*' }));
 app.use(express.json())
+app.post("/submit-form", async (req, res) => {
+
+    // try {
+    //     const { name, email, message } = req.body;
+    //     const newfeedback = new feedback({
+    //         name, email, message
+    //     });
+    //     await newfeedback.save();
+    //     res.status(200).json({ message: 'User result saved successfully' })
+
+    // } catch (error) {
+    //     console.error('Error saving user result:', error);
+    //     res.status(500).json({ error: 'Internal Server Error' });
+    // }
+
+    // Create a Nodemailer transporter
+    // let transporter = nodemailer.createTransport({
+    //     service: "gmail",
+    //     auth: {
+    //         user: "", // Replace with your Gmail address
+    //         pass: "", // Replace with your Gmail password
+    //     },
+    // });
+
+    // // Email content
+    // let mailOptions = {
+    //     from: `${email}`, // Sender address
+    //     to: "", // Receiver address
+    //     subject: "New Contact Form Submission",
+    //     text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+    // };
+
+    // // Send email
+    // transporter.sendMail(mailOptions, (error, info) => {
+    //     if (error) {
+    //         console.log(error);
+    //         res.status(500).send("Error sending email");
+    //     } else {
+    //         console.log("Email sent: " + info.response);
+    //         res.send("Form submitted successfully");
+    //     }
+    // });
+});
+
 
 app.post('/signup', async (req, res) => {
 
@@ -39,7 +85,7 @@ app.post('/signup', async (req, res) => {
 
         }
         else {
-            res.send({code:300 , message:"User already Register "})
+            res.send({ code: 300, message: "User already Register " })
         }
 
     })
@@ -106,7 +152,7 @@ app.post('/allquizes', async (req, res) => {
     try {
         const allQuizData = await quizsstore.find();
 
-       
+
         res.json(allQuizData);
     } catch (error) {
         console.error(error);
@@ -121,18 +167,41 @@ app.post('/allquizes', async (req, res) => {
     //     res.status(401).json({ code: 401, message: "error" });
     // }
 });
-
-app.delete('/:quizId', async (req, res) => {
-    const { quizId } = req.params;
+app.delete('/deletequiz', async (req, res) => {
+    const { id } = req.query;
+    console.log(id);
 
     try {
+        console.log('Deleting quiz with ID:', _id);
         // Use Mongoose to find and remove the quiz by ID
-        const deletedQuiz = await quizsstore.findByIdAndRemove(quizId);
+        const deletedQuiz = await quizsstore.findOneAndDelete({ _id: id });
 
         if (!deletedQuiz) {
+            console.log("Quiz not found");
             return res.status(404).json({ message: 'Quiz not found' });
         }
 
+        console.log('Quiz deleted successfully');
+        res.json({ message: 'Quiz deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting quiz:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.delete('/:quizId', async (req, res) => {
+    const _id = req.params;
+
+    try {
+        // Use Mongoose to find and remove the quiz by ID
+        console.log(_id);
+        const deletedQuiz = await quizsstore.findByIdAndDelete(_id);
+
+        if (!deletedQuiz) {
+            console.log("404");
+            return res.status(404).json({ message: 'Quiz not found' });
+        }
+        console.log("done");
         res.json({ message: 'Quiz deleted successfully', deletedQuiz });
     } catch (error) {
         console.error('Error deleting quiz:', error);
@@ -359,20 +428,29 @@ app.post('/createquiz', (req, res) => {
 
 app.post('/saveUserResult', async (req, res) => {
     try {
-        const { userId, quizTitle, score, numberOfQuestions } = req.body;
+        const { userId, quizid, username, quizTitle, score, numberOfQuestions } = req.body;
 
-        // Create a new user result instance
-        const newUserResult = new UserResult({
-            userId,
-            quizTitle,
-            score,
-            numberOfQuestions,
-        });
+        // Check if there are existing user results for the provided userId and quizid
+        const existingUserResult = await UserResult.findOne({ userId, quizid });
 
-        // Save the user result to the database
-        await newUserResult.save();
+        if (existingUserResult) {
+            // If existing user result found, update the score
+            existingUserResult.score = score;
+            await existingUserResult.save();
+        } else {
+            // If no existing user result found, save a new user result
+            const newUserResult = new UserResult({
+                userId,
+                quizid,
+                username,
+                quizTitle,
+                score,
+                numberOfQuestions,
+            });
+            await newUserResult.save();
+        }
 
-        res.status(200).json({ message: 'User result saved successfully' });
+        res.status(200).json({ message: 'User result saved successfully' })
     } catch (error) {
         console.error('Error saving user result:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -395,6 +473,24 @@ app.post('/userAllResults', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+app.post('/leaderboard', async (req, res) => {
+    const { quizid } = req.body;
+
+    try {
+        // const leaderboarddata = await UserResult.find({ quizid: quizid });
+        const leaderboarddata = await UserResult.find({ quizid }).sort({ score: -1 });
+
+        // if (!leaderboarddata || leaderboarddata.length === 0) {
+        //     return res.status(404).json({ message: 'No user results found for the specified user ID' });
+        // }
+
+        res.status(200).json(leaderboarddata);
+    } catch (error) {
+        console.error('Error fetching user results:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 
 app.post('/AllCreatedQuizzes', async (req, res) => {
     const { userId } = req.body;

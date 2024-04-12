@@ -5,6 +5,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         require: true
     },
+    quizid: {
+        type: String,
+        require: true
+    },
+    username: {
+        type: String,
+        require: true
+    },
     quizTitle: {
         type: String,
         require: true
