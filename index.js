@@ -9,6 +9,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 const jWT_SECRET = "0";
 const UserResult = require('./database/model/UserResult');
+const UserComment = require('./database/model/Comment');
 const nodemailer = require("nodemailer");
 
 app.use(cors(
@@ -492,6 +493,7 @@ app.post('/leaderboard', async (req, res) => {
 });
 
 
+
 app.post('/AllCreatedQuizzes', async (req, res) => {
     const { userId } = req.body;
 
@@ -525,6 +527,41 @@ app.post('/AllCreatedQuizzes', async (req, res) => {
 //     })
 
 // })
+
+
+
+//comment add
+// POST route to add a new comment
+app.post('/comment', async (req, res) => {
+    try {
+        const { userid, quizid, Comment, firstname, Lastname } = req.body;
+        const newComment = new UserComment({ userid, quizid, Comment, firstname, Lastname });
+        // console.log(newComment);
+        await newComment.save();
+        console.log("Comment added successfully");
+        res.json({ code: 200, success: true, message: "Comment added successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Failed to add comment" });
+    }
+});
+
+app.post('/comments', async (req, res) => {
+    const { quizid } = req.body;
+
+    try {
+        // const commentsdata = await UserComment.find({ quizid: quizid });
+        const commentsdata = await UserComment.find({ quizid: quizid }).sort({ createdAt: -1 });
+
+        // const commentsdata = await UserResult.find({ quizid }).sort({ score: -1 });
+        console.log(commentsdata);
+        res.status(200).json(commentsdata);
+    } catch (error) {
+        console.error('Error fetching user comments:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 
 app.get('/', (req, res) => {
     res.send({ message: "everything is fine " })
